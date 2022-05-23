@@ -29,6 +29,7 @@ int i = 0;                      // CodeComposer hates the i in for loops if its 
 volatile uint32_t x = 0;        // Iterator variable, decides the knobs place in the alphabet shown on screen
 char letter[5];                 // Current letter from alphabet to be shown on screen
 char word[20] = "T E S T";
+char correctWord[20] = "";      ///This is meant to hold the correct word to be guessed
 char alphabet[26] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 
 void main(void)
