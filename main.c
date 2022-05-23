@@ -94,10 +94,19 @@ void PORT1_IRQHandler(void)                         // Interrupt handler for the
 {
     if (P1->IFG & BIT6 )                            // Knob has a button built in. This checks if the button signal is high
     {
-
-
-
-        strncat(word, &alphabet[x], 1);             // This currently does not update the word on screen. Haven't figured out why yet.
+        if(strchr(correctWord, alphabet[x]) != NULL)			///FIXME: This logic currently only adds one letter to word
+        {								///even if there are more than one of same letter
+		
+            for(i = 0; i < strlen(correctWord) - 1; i++)                ///For loop to find current index of correct guess in correctWord
+            {
+                if(correctWord[i] == alphabet[x])                       ///Comparing each letter in correctWord with our guess
+                {
+                    strncpy(&word[i], &alphabet[x], 1);                 ///Using "i" to put our guess in the correct position
+                }
+            }
+            //strncpy(&word[2], &alphabet[x], 1);                 //Copies letter onto string word
+            ///strncat(word, &alphabet[x], 1);             // This currently does not update the word on screen. Haven't figured out why yet.
+        }
     }
     P1->IFG = 0;                                    // reset GPIO flag
 }
