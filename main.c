@@ -97,7 +97,7 @@ void PORT1_IRQHandler(void)                         // Interrupt handler for the
         if(strchr(correctWord, alphabet[x]) != NULL)			///FIXME: This logic currently only adds one letter to word
         {								///even if there are more than one of same letter
 		
-            for(i = 0; i < strlen(correctWord) - 1; i++)                ///For loop to find current index of correct guess in correctWord
+            for(i = 0; i < strlen(correctWord); i++)                ///For loop to find current index of correct guess in correctWord
             {
                 if(correctWord[i] == alphabet[x])                       ///Comparing each letter in correctWord with our guess
                 {
