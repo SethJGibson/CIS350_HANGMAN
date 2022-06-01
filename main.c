@@ -23,6 +23,7 @@ void PORT1_IRQHandler(void);                        // Block that executes after
 void hangTheMan();
 void clearWord();
 void gameLose();
+void gameWin();
 void removeChar(char *str, char letter);
 void LCDLineWrite(int16_t a, int16_t b, char line[], int16_t textColor, int16_t backColor, uint8_t pixelSize, uint8_t lineLength);
 
@@ -32,11 +33,13 @@ const unsigned short PoCv2[] = {/* DATA GOES HERE */};  // IGNORE.
 int i = 0;                      // CodeComposer hates the i in for loops if its not up here
 volatile uint32_t x = 0;        // Iterator variable, decides the knobs place in the alphabet shown on screen
 char letter[5];                 // Current letter from alphabet to be shown on screen
+int len = 0;
 char word[20] = "";
 char correctWord[20] = "TEST";      ///This is meant to hold the correct word to be guessed
 char alphabet[26] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 char workingAlpha[26];
 int lifeCounter = 0;
+int winCounter = 0;
 int lifeCounterCheck = 0;
 
 void main(void) {                                                   /* IGNORE THIS BLOCK, its all boring hardware setup */
@@ -70,9 +73,14 @@ void main(void) {                                                   /* IGNORE TH
             hangTheMan();                                   // if there was, add a limb to the m a n
         }
 
-        if (lifeCounterCheck == 6){                         // Checks if the hangman is completed
+        if (lifeCounterCheck == 6) {                        // Checks if the hangman is completed
             gameLose();                                     // if he is, end the game
         }
+
+        if (winCounter == len) {                        // Checks if the hangman is completed
+            gameWin();                                     // if he is, end the game
+        }
+
     }
 }
 
@@ -111,6 +119,7 @@ void PORT1_IRQHandler(void)                         // Interrupt handler for the
                 if(correctWord[i] == workingAlpha[x])           // Comparing each letter in correctWord with our guess
                 {
                     strncpy(&word[i], &workingAlpha[x], 1);     // Using "i" to put our guess in the correct position
+                    winCounter++;
                 }
             }
         }
@@ -151,7 +160,7 @@ void hangTheMan() {
 
 void clearWord()                // Fills in word space with underscores based on word length
 {
-    int len = 0;
+    len = 0;
     for(i = 0; correctWord[i] != '\0'; i++)     // get word length
     {
         len++;
@@ -170,6 +179,7 @@ void reset()                    // Clear view and reset all globals
     // clear or reassign correctWord from wordlist. this can be function or we do it right here
     strncpy(workingAlpha, alphabet, 26);    // restore the working alphabet to all 26 letters
     lifeCounter = 0;
+    winCounter = 0;
     lifeCounterCheck = 0;
 }
 
@@ -178,6 +188,16 @@ void gameLose() {               // Game Lost State. Shows losing graphic, then r
         LCDLineWrite(0, 70, " YOU LOSE ", ST7735_Color565(255, 244, 32), ST7735_Color565(0xff, 0, 0), 2, 12);
         __delay_cycles(3000000);
         LCDLineWrite(0, 70, " YOU LOSE ", ST7735_Color565(0xff, 0, 0), ST7735_Color565(255, 244, 32), 2, 12);
+        __delay_cycles(3000000);
+    }
+    reset();
+}
+
+void gameWin() {               // Game Win State. Shows winning graphic, then resets.
+    for (i = 0; i < 10; i++) {
+        LCDLineWrite(0, 70, " YOU WIN! ", ST7735_Color565(0, 32, 255), ST7735_Color565(0, 192, 0), 2, 12);
+        __delay_cycles(3000000);
+        LCDLineWrite(0, 70, " YOU WIN! ", ST7735_Color565(0, 192, 0), ST7735_Color565(0, 32, 255), 2, 12);
         __delay_cycles(3000000);
     }
     reset();
