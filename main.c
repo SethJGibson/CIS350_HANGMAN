@@ -1,5 +1,5 @@
 /*---------------------------------------------------
- Author:      Seth J. Gibson (For now)
+ Author:      Seth J. Gibson, Jaiden Ortiz, Dennis Salo
  Course:      CIS 350-01
  Description: This program initializes a Red Tab ST7735
                  LCD screen and sends an example menu
@@ -7,10 +7,13 @@
  ---------------------------------------------------*/
 
 #include "msp.h"
+#include "WordBank.h"
 #include <ST7735.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
+#include <stdlib.h>
 
 void Clock_Init48MHz(void);                         // MCLK and SMCLK initialization
 void SysTick_Init();                                // SysTick initialization
@@ -59,6 +62,9 @@ void main(void) {                                                   /* IGNORE TH
     uint16_t black = ST7735_Color565(0,0,0);
 
     ST7735_FillScreen(black);                       // Set black background
+
+    srand(time(NULL));                              //Initialize random function
+    strcpy(correctWord, bank[rand() % 25])         //copy random word from bank to correctWord
 
     strncpy(workingAlpha, alphabet, 26);
     clearWord();
