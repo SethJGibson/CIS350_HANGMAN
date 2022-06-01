@@ -64,7 +64,7 @@ void main(void) {                                                   /* IGNORE TH
     ST7735_FillScreen(black);                       // Set black background
 
     srand(time(NULL));                              //Initialize random function
-    strcpy(correctWord, bank[rand() % 25])         //copy random word from bank to correctWord
+    strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
 
     strncpy(workingAlpha, alphabet, 26);
     clearWord();
@@ -181,6 +181,8 @@ void reset()                    // Clear view and reset all globals
 {
     Output_Clear();
     x = 0;
+    memset(word, 0, 20);
+    strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
     clearWord();
     // clear or reassign correctWord from wordlist. this can be function or we do it right here
     strncpy(workingAlpha, alphabet, 26);    // restore the working alphabet to all 26 letters
