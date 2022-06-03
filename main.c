@@ -1,10 +1,14 @@
-/*---------------------------------------------------
- Author:      Seth J. Gibson, Jaiden Ortiz, Dennis Salo
- Course:      CIS 350-01
- Description: This program initializes a Red Tab ST7735
-                 LCD screen and sends an example menu
-                 to the display.
- ---------------------------------------------------*/
+/*! \file main.c
+    \brief A Hangman game on an MSP432 embedded system.
+
+    This program displays a Hangman game to an 128x160 display
+    and is controlled by the player through a rotary encoder.
+    Game restarts when prior game ends.
+
+    \author Seth J. Gibson, Jaiden Ortiz, Dennis Salo
+    \version 0.2
+    \since 0.1
+*/
 
 #include "msp.h"
 #include "WordBank.h"
@@ -15,34 +19,135 @@
 #include <time.h>
 #include <stdlib.h>
 
-void Clock_Init48MHz(void);                         // MCLK and SMCLK initialization
-void SysTick_Init();                                // SysTick initialization
-void SysTick_Delay(uint16_t delayms);               // SysTick millisecond delay
-void SetupPort5Interrupts();                        // Set up interrupts on Port 5
-void SetupPort1Interrupts();                        // Set up interrupts on Port 3
-void PORT5_IRQHandler(void);                        // Block that executes after PORT5 interrupt (Knob turning)
-void PORT1_IRQHandler(void);                        // Block that executes after PORT1 interrupt (Button press)
-                                                    // Writes a string to the LCD
+/**
+* Initializes MCLK and SMCLK initialization to 48 MHz
+*/
+void Clock_Init48MHz(void);                 
+
+/**
+* Enables SysTick, then initializes system tick speed to 
+  3MHz with no interrupts.
+*/
+void SysTick_Init();              
+
+/**
+* Delay function that utilizes enabled SysTick.
+* @param delayms Length of delay in milliseconds
+*/
+void SysTick_Delay(uint16_t delayms);               
+
+/**
+* Initializes PORTX Interrupts on P5.4 and P5.5. These
+* are used for the CLK and DT pins of the rotary encoder.
+*/
+void SetupPort5Interrupts();                        
+
+/**
+* Initializes PORTX Interrupts on P1.7. This pin
+* is used for the button on the rotary encoder.
+*/
+void SetupPort1Interrupts();    
+
+/**
+* Function that allows user to iterate through 
+* options via rotary encoder signals. Occurs after 
+* PORT5 interrupt.
+*/
+void PORT5_IRQHandler(void);                        
+
+/**
+* Function that allows user to select options via 
+* button on the rotary encoder. Occurs after PORT1 
+* interrupt.
+*/
+void PORT1_IRQHandler(void);                        
+
+/**
+* This function adds a limb to the Hangman by incrementing
+* the lifeCounter global and drawing a limb according to
+* the value of lifeCounter.
+*/
 void hangTheMan();
+
+/**
+* This function fills in the space allotted for the hangman 
+* word with underscores based on word length.
+*/
 void clearWord();
+
+/**
+* This function resets all global variables to their values 
+* on startup.
+*/
+void reset();
+
+/**
+* This function declares the losing state of the game by 
+* sending flashing graphics to the LCD and calls reset().
+*/
 void gameLose();
+
+/**
+* This function declares the winning state of the game by
+* sending flashing graphics to the LCD and calls reset().
+*/
 void gameWin();
-void removeChar(char *str, char letter);
+
+/**
+* This function removes a letter from the available 
+* alphabet after a selection has been made, to
+* avoid repeat selections.
+* @param str Character array for Available alphabet 
+* @param letter Letter selected by the user
+*/
+void removeChar(char* str, char letter);
+
+/**
+* This function writes a string to the LCD.
+* @param a X coordinate for the placement of the string
+* @param b Y coordinate for the placement of the string
+* @param line[] String to be printed
+* @param textColor RGB color value of the text displayed
+* @param backColor RGB color value of the space behind the displayed text
+* @param pixelSize Size of the text displayed
+* @param lineLength Amount of characters in the string
+*/
 void LCDLineWrite(int16_t a, int16_t b, char line[], int16_t textColor, int16_t backColor, uint8_t pixelSize, uint8_t lineLength);
 
-const unsigned short PoCv2[] = {/* DATA GOES HERE */};  // IGNORE.
-// To show images, .bmp files need to be broken down into hex and called as char arrays. The data usually go here.
+/// To show images, .bmp files need to be broken down into hex and called as char arrays. The data usually go here.
+const unsigned short PoCv2[] = {/* DATA GOES HERE */ };  
 
-int i = 0;                      // CodeComposer hates the i in for loops if its not up here
-volatile uint32_t x = 0;        // Iterator variable, decides the knobs place in the alphabet shown on screen
-char letter[5];                 // Current letter from alphabet to be shown on screen
+/// CodeComposer must have the i in for loops declared as global
+int i = 0;           
+
+/// Iterator variable that decides the queued letter in the alphabet shown on screen
+volatile uint32_t x = 0;        
+
+/// Queued letter from alphabet to be shown on screen
+char letter[5];              
+
+/// Global length value for finding length of multiple strings
 int len = 0;
+
+/// String displayed on the screen, populated with the correct word as game progresses
 char word[20] = "";
-char correctWord[20] = "TEST";      ///This is meant to hold the correct word to be guessed
-char alphabet[26] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+
+/// String that contains the correct letter 
+char correctWord[20] = "TEST";      
+
+/// String that contains a full copy of the alphabet. Available alphabet is copied from this source
+char alphabet[26] = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
+
+/// String that contains the working copy of the alphabet. Letters are removed as game progresses
 char workingAlpha[26];
+
+/// Global value that counts the amount of failed guesses that have been made
 int lifeCounter = 0;
+
+/// Global value that counts the amount of successful guesses that have been made
 int winCounter = 0;
+
+/// Global value that verifies the amount of failed guesses that have been made
 int lifeCounterCheck = 0;
 
 void main(void) {                                                   /* IGNORE THIS BLOCK, its all boring hardware setup */
@@ -59,7 +164,7 @@ void main(void) {                                                   /* IGNORE TH
     Output_Clear();                                 // Initial command to clear screen before anything
 
     uint16_t white = ST7735_Color565(255, 255, 255);    // LCD color macros for black and white
-    uint16_t black = ST7735_Color565(0,0,0);
+    uint16_t black = ST7735_Color565(0, 0, 0);
 
     ST7735_FillScreen(black);                       // Set black background
 
@@ -69,7 +174,7 @@ void main(void) {                                                   /* IGNORE TH
     strncpy(workingAlpha, alphabet, 26);
     clearWord();
 
-    while(1)                                                // Infinite loops are key to keeping variables updated live on screen
+    while (1)                                                // Infinite loops are key to keeping variables updated live on screen
     {
         sprintf(letter, "%c", workingAlpha[x]);                 // Put letter in a string
         LCDLineWrite(16, 60, letter, white, black, 5, 1);   // then print that string
@@ -92,20 +197,20 @@ void main(void) {                                                   /* IGNORE TH
 
 void PORT5_IRQHandler(void)                         // Interrupt handler triggers when the knob turns. This logic decides which letter we're on.
 {                                                   // This block is currently unfinished due to some noticeable jank.
-    if (P5->IFG & BIT5 )                            // Checking if the Encoder CLK is high
+    if (P5->IFG & BIT5)                            // Checking if the Encoder CLK is high
     {
-        if(x > (strlen(workingAlpha))){//25){                                 // If x reached the end of the alphabet, reset to 0
+        if (x > (strlen(workingAlpha))) {//25){                                 // If x reached the end of the alphabet, reset to 0
             x = 0;
         }
-        if (P5->IN & BIT4){                         // If the CLK is high and DT is high, its clockwise
+        if (P5->IN & BIT4) {                         // If the CLK is high and DT is high, its clockwise
             __delay_cycles(30000);                  // Wait 10 ms and check again. This debounces the input.
-            if (P5->IN & BIT4){
+            if (P5->IN & BIT4) {
                 x++;
             }
         }
         else {                                      // If the CLK is high and DT is not high, its CCW
             __delay_cycles(30000);
-            if (P5->IN & BIT4){
+            if (P5->IN & BIT4) {
                 x++;                                // Currently it only counts up no matter how you turn it.
             }
         }
@@ -115,14 +220,14 @@ void PORT5_IRQHandler(void)                         // Interrupt handler trigger
 
 void PORT1_IRQHandler(void)                         // Interrupt handler for the button press. This is where letter select logic goes.
 {
-    if (P1->IFG & BIT7 )                            // Knob has a button built in. This checks if the button signal is high
+    if (P1->IFG & BIT7)                            // Knob has a button built in. This checks if the button signal is high
     {
-        if(strchr(correctWord, workingAlpha[x]) != NULL)
+        if (strchr(correctWord, workingAlpha[x]) != NULL)
         {
 
-            for(i = 0; i < strlen(correctWord); i++)            // For loop to find current index of correct guess in correctWord
+            for (i = 0; i < strlen(correctWord); i++)            // For loop to find current index of correct guess in correctWord
             {
-                if(correctWord[i] == workingAlpha[x])           // Comparing each letter in correctWord with our guess
+                if (correctWord[i] == workingAlpha[x])           // Comparing each letter in correctWord with our guess
                 {
                     strncpy(&word[i], &workingAlpha[x], 1);     // Using "i" to put our guess in the correct position
                     winCounter++;
@@ -141,24 +246,24 @@ void hangTheMan() {
     uint16_t white = ST7735_Color565(255, 255, 255);    // LCD color macros for white
 
     switch (lifeCounter) {
-       case 1:
-           ST7735_FillRect(82, 22, 15, 15, white);     // Head
-          break;
-       case 2:
-           ST7735_FillRect(82, 38, 15, 35, white);     // Torso
-           break;
-       case 3:
-           ST7735_FillRect(75, 38, 6, 30, white);      // ArmL
-          break;
-       case 4:
-           ST7735_FillRect(98, 38, 6, 30, white);      // ArmR
-          break;
-       case 5:
-           ST7735_FillRect(82, 74, 6, 30, white);      // LegL
-          break;
-       case 6:
-           ST7735_FillRect(91, 74, 6, 30, white);      // LegR
-          break;
+    case 1:
+        ST7735_FillRect(82, 22, 15, 15, white);     // Head
+        break;
+    case 2:
+        ST7735_FillRect(82, 38, 15, 35, white);     // Torso
+        break;
+    case 3:
+        ST7735_FillRect(75, 38, 6, 30, white);      // ArmL
+        break;
+    case 4:
+        ST7735_FillRect(98, 38, 6, 30, white);      // ArmR
+        break;
+    case 5:
+        ST7735_FillRect(82, 74, 6, 30, white);      // LegL
+        break;
+    case 6:
+        ST7735_FillRect(91, 74, 6, 30, white);      // LegR
+        break;
     }
 
     lifeCounterCheck = lifeCounter;
@@ -167,11 +272,11 @@ void hangTheMan() {
 void clearWord()                // Fills in word space with underscores based on word length
 {
     len = 0;
-    for(i = 0; correctWord[i] != '\0'; i++)     // get word length
+    for (i = 0; correctWord[i] != '\0'; i++)     // get word length
     {
         len++;
     }
-    for(i = 0; i < len; i++)                    // then print the underscores accordingly
+    for (i = 0; i < len; i++)                    // then print the underscores accordingly
     {
         strncpy(&word[i], "_", 1);
     }
@@ -211,26 +316,26 @@ void gameWin() {               // Game Win State. Shows winning graphic, then re
     reset();
 }
 
-void removeChar(char *str, char letter)     // Function for removing a letter from the available working alphabet after a selection
-    {
-        int i, j;
-        int len = strlen(str);
+void removeChar(char* str, char letter)     // Function for removing a letter from the available working alphabet after a selection
+{
+    int i, j;
+    int len = strlen(str);
 
-        for(i = 0; i < len; i++)
+    for (i = 0; i < len; i++)
+    {
+        if (str[i] == letter)
         {
-            if(str[i] == letter)
+            for (j = i; j <= len; j++)
             {
-                for(j = i; j <= len; j++)
-                {
-                    str[j] = str[j + 1];
-                }
-                len--;
-                i--;
+                str[j] = str[j + 1];
             }
+            len--;
+            i--;
         }
     }
+}
 
-/* LOOK NO FURTHER. The rest is boring initialization shit that has no sway over logic. You're brain's just gonna hurt reading past this line. */
+/* NOTE FOR CS TEAM MEMBERS: LOOK NO FURTHER. The rest is boring initialization shit that has no sway over logic. You're brain's just gonna hurt reading past this line. */
 
 void LCDLineWrite(int16_t a, int16_t b, char line[], int16_t textColor, int16_t backColor, uint8_t pixelSize, uint8_t lineLength) {
     int i = 0;
@@ -244,19 +349,19 @@ void LCDLineWrite(int16_t a, int16_t b, char line[], int16_t textColor, int16_t 
 void SetupPort5Interrupts()                         //Set up interrupts on Port 5
 {
     P5->SEL1 &= ~BIT4;                              //clear bits 5.4. 5.4 is DT
-      P5->SEL0 &= ~BIT4;
-      P5->DIR &= ~BIT4;                               //set as input
+    P5->SEL0 &= ~BIT4;
+    P5->DIR &= ~BIT4;                               //set as input
 
-      P5->IES &=~ BIT4;                               //Set Rising Edge
-      P5->IE |= BIT4;                                 //Enable the interrupt
+    P5->IES &= ~BIT4;                               //Set Rising Edge
+    P5->IE |= BIT4;                                 //Enable the interrupt
 
-      P5->SEL1 &= ~BIT5;                              //clear bits 5.5. 5.5 is CLK
-      P5->SEL0 &= ~BIT5;
-      P5->DIR &= ~BIT5;                               //set as input
+    P5->SEL1 &= ~BIT5;                              //clear bits 5.5. 5.5 is CLK
+    P5->SEL0 &= ~BIT5;
+    P5->DIR &= ~BIT5;                               //set as input
 
-      P5->IES |= BIT5;                               //Set Falling Edge
-      P5->IE |= BIT5;                                 //Enable the interrupt
-      P5 -> IFG = 0;                                  //Set Flag to 0
+    P5->IES |= BIT5;                               //Set Falling Edge
+    P5->IE |= BIT5;                                 //Enable the interrupt
+    P5->IFG = 0;                                  //Set Flag to 0
 }
 
 void SetupPort1Interrupts()                         //Set up my interrupts on Port 3
@@ -264,51 +369,51 @@ void SetupPort1Interrupts()                         //Set up my interrupts on Po
     P1->SEL1 &= ~BIT7;                              //clear bits 1.6
     P1->SEL0 &= ~BIT7;
     P1->DIR &= ~BIT7;                               //set as input
-    P1 -> REN |= BIT7;                              //set internal resistor
+    P1->REN |= BIT7;                              //set internal resistor
     P1->OUT |= BIT7;
     P1->IES |= BIT7;                                //Set Falling Edge
     P1->IE |= BIT7;                                 //Enable the interrupt
-    P1 -> IFG = 0;                                  //Set Flag to 0
+    P1->IFG = 0;                                  //Set Flag to 0
 }
 
 void Clock_Init48MHz(void)
 {
     // Configure Flash wait-state to 1 for both banks 0 & 1
     FLCTL->BANK0_RDCTL = (FLCTL->BANK0_RDCTL & ~(FLCTL_BANK0_RDCTL_WAIT_MASK)) |
-    FLCTL_BANK0_RDCTL_WAIT_1;
+        FLCTL_BANK0_RDCTL_WAIT_1;
     FLCTL->BANK1_RDCTL = (FLCTL->BANK0_RDCTL & ~(FLCTL_BANK0_RDCTL_WAIT_MASK)) |
-    FLCTL_BANK1_RDCTL_WAIT_1;
+        FLCTL_BANK1_RDCTL_WAIT_1;
 
     //Configure HFXT to use 48MHz crystal, source to MCLK & HSMCLK*
     PJ->SEL0 |= BIT2 | BIT3;                    // Configure PJ.2/3 for HFXT function
     PJ->SEL1 &= ~(BIT2 | BIT3);
-    CS->KEY = CS_KEY_VAL ;                      // Unlock CS module for register access
+    CS->KEY = CS_KEY_VAL;                      // Unlock CS module for register access
     CS->CTL2 |= CS_CTL2_HFXT_EN | CS_CTL2_HFXTFREQ_6 | CS_CTL2_HFXTDRIVE;
-        while(CS->IFG & CS_IFG_HFXTIFG)
-                    CS->CLRIFG |= CS_CLRIFG_CLR_HFXTIFG;
+    while (CS->IFG & CS_IFG_HFXTIFG)
+        CS->CLRIFG |= CS_CLRIFG_CLR_HFXTIFG;
 
     /* Select MCLK & HSMCLK = HFXT, no divider */
-    CS->CTL1 = CS->CTL1 & ~(CS_CTL1_SELM_MASK   |
-                            CS_CTL1_DIVM_MASK   |
-                            CS_CTL1_SELS_MASK   |
-                            CS_CTL1_DIVHS_MASK)   |
-                            CS_CTL1_SELM__HFXTCLK |
-                            CS_CTL1_SELS__HFXTCLK;
+    CS->CTL1 = CS->CTL1 & ~(CS_CTL1_SELM_MASK |
+        CS_CTL1_DIVM_MASK |
+        CS_CTL1_SELS_MASK |
+        CS_CTL1_DIVHS_MASK) |
+        CS_CTL1_SELM__HFXTCLK |
+        CS_CTL1_SELS__HFXTCLK;
 
-    CS->CTL1 = CS->CTL1 |CS_CTL1_DIVS_2;    // change the SMCLK clock speed to 12 MHz.
+    CS->CTL1 = CS->CTL1 | CS_CTL1_DIVS_2;    // change the SMCLK clock speed to 12 MHz.
 
     CS->KEY = 0;                            // Lock CS module from unintended accesses
 }
 
 void SysTick_Init() {
-    SysTick -> CTRL = 0;                            // disable SysTick
-    SysTick -> LOAD = 0x00FFFFFF;                   // max reload value
-    SysTick -> VAL = 0;                             // any write to current clears it
-    SysTick -> CTRL = 0x00000005;                   // enable SysTiick, 3MHz, no interrupts
+    SysTick->CTRL = 0;                            // disable SysTick
+    SysTick->LOAD = 0x00FFFFFF;                   // max reload value
+    SysTick->VAL = 0;                             // any write to current clears it
+    SysTick->CTRL = 0x00000005;                   // enable SysTiick, 3MHz, no interrupts
 }
 
 void SysTick_Delay(uint16_t delayms) {
-    SysTick -> LOAD = ((delayms * 3000) - 1);       // delay for 1 usecond per delay value
-    SysTick -> VAL = 0;                             // any write to CVR clears it
-    while ((SysTick -> CTRL & 0x00010000) == 0);    // wait for flag to be set
+    SysTick->LOAD = ((delayms * 3000) - 1);       // delay for 1 usecond per delay value
+    SysTick->VAL = 0;                             // any write to CVR clears it
+    while ((SysTick->CTRL & 0x00010000) == 0);    // wait for flag to be set
 }
