@@ -23,6 +23,15 @@ void SetupPort1Interrupts();                        // Set up interrupts on Port
 void PORT5_IRQHandler(void);                        // Block that executes after PORT5 interrupt (Knob turning)
 void PORT1_IRQHandler(void);                        // Block that executes after PORT1 interrupt (Button press)
                                                     // Writes a string to the LCD
+void gameInProgressRotate(void);
+void gameInProgressButton(void);
+void mainMenuRotate(void);
+void mainMenuButton(void);
+void difficultyRotate(void);
+void difficultyButton(void);
+void leaderboardRotate(void);
+void leaderboardButton(void);
+
 void hangTheMan();
 void clearWord();
 void gameLose();
@@ -34,6 +43,8 @@ const unsigned short PoCv2[] = {/* DATA GOES HERE */};  // IGNORE.
 // To show images, .bmp files need to be broken down into hex and called as char arrays. The data usually go here.
 
 int i = 0;                      // CodeComposer hates the i in for loops if its not up here
+int state = 0;                  // 0 = Game, 1 = Menu, 2 = Difficulty, 3 = Leaderboard
+int firstTime = 1;
 volatile uint32_t x = 0;        // Iterator variable, decides the knobs place in the alphabet shown on screen
 char letter[5];                 // Current letter from alphabet to be shown on screen
 int len = 0;
@@ -71,22 +82,50 @@ void main(void) {                                                   /* IGNORE TH
 
     while(1)                                                // Infinite loops are key to keeping variables updated live on screen
     {
-        sprintf(letter, "%c", workingAlpha[x]);                 // Put letter in a string
-        LCDLineWrite(16, 60, letter, white, black, 5, 1);   // then print that string
-        LCDLineWrite(16, 120, word, white, black, 2, 20);   // The full word goes here too
+        switch (state) {
+            case 0:
+                if (firstTime) {
+                    // Display Graphics
+                    firstTime = 0;
+                }
+                sprintf(letter, "%c", workingAlpha[x]);                 // Put letter in a string
+                LCDLineWrite(16, 60, letter, white, black, 5, 1);   // then print that string
+                LCDLineWrite(16, 120, word, white, black, 2, 20);   // The full word goes here too
 
-        if (lifeCounter != lifeCounterCheck) {              // Checks input to see if change has been made
-            hangTheMan();                                   // if there was, add a limb to the m a n
+                if (lifeCounter != lifeCounterCheck) {              // Checks input to see if change has been made
+                    hangTheMan();                                   // if there was, add a limb to the m a n
+                }
+
+                if (lifeCounterCheck == 6) {                        // Checks if the hangman is completed
+                    gameLose();                                     // if he is, end the game
+                }
+
+                if (winCounter == len) {                        // Checks if the hangman is completed
+                    gameWin();                                     // if he is, end the game
+                }
+                break;
+            case 1:
+                if (firstTime) {
+                    LCDLineWrite(16, 60, "MENU", white, black, 5, 5);   // Test string to show it entered menu state
+                    firstTime = 0;
+                }
+
+                break;
+            case 2:
+                if (firstTime) {
+
+                    firstTime = 0;
+                }
+
+                break;
+            case 3:
+                if (firstTime) {
+
+                    firstTime = 0;
+                }
+
+                break;
         }
-
-        if (lifeCounterCheck == 6) {                        // Checks if the hangman is completed
-            gameLose();                                     // if he is, end the game
-        }
-
-        if (winCounter == len) {                        // Checks if the hangman is completed
-            gameWin();                                     // if he is, end the game
-        }
-
     }
 }
 
@@ -94,9 +133,6 @@ void PORT5_IRQHandler(void)                         // Interrupt handler trigger
 {                                                   // This block is currently unfinished due to some noticeable jank.
     if (P5->IFG & BIT5 )                            // Checking if the Encoder CLK is high
     {
-        if(x > (strlen(workingAlpha))){//25){                                 // If x reached the end of the alphabet, reset to 0
-            x = 0;
-        }
         if (P5->IN & BIT4){                         // If the CLK is high and DT is high, its clockwise
             __delay_cycles(30000);                  // Wait 10 ms and check again. This debounces the input.
             if (P5->IN & BIT4){
@@ -110,31 +146,93 @@ void PORT5_IRQHandler(void)                         // Interrupt handler trigger
             }
         }
     }
+
+    switch (state) {
+        case 0:
+            gameInProgressRotate();
+            break;
+        case 1:
+            mainMenuRotate();
+            break;
+        case 2:
+            difficultyRotate();
+            break;
+        case 3:
+            leaderboardRotate();
+            break;
+    }
+
     P5->IFG = 0;                                    // Reset GPIO flag
 }
 
 void PORT1_IRQHandler(void)                         // Interrupt handler for the button press. This is where letter select logic goes.
 {
-    if (P1->IFG & BIT7 )                            // Knob has a button built in. This checks if the button signal is high
+    if (P1->IFG & BIT7)                            // Knob has a button built in. This checks if the button signal is high
     {
-        if(strchr(correctWord, workingAlpha[x]) != NULL)
-        {
-
-            for(i = 0; i < strlen(correctWord); i++)            // For loop to find current index of correct guess in correctWord
-            {
-                if(correctWord[i] == workingAlpha[x])           // Comparing each letter in correctWord with our guess
-                {
-                    strncpy(&word[i], &workingAlpha[x], 1);     // Using "i" to put our guess in the correct position
-                    winCounter++;
-                }
-            }
+        switch (state) {
+            case 0:
+                gameInProgressButton();
+                break;
+            case 1:
+                mainMenuButton();
+                break;
+            case 2:
+                difficultyButton();
+                break;
+            case 3:
+                leaderboardButton();
+                break;
         }
-        else {
-            lifeCounter++;
-        }
-        removeChar(workingAlpha, workingAlpha[x]);
     }
     P1->IFG = 0;                                    // reset GPIO flag
+}
+
+void gameInProgressRotate(void) {
+    if(x > (strlen(workingAlpha)))                                 // If x reached the end of the alphabet, reset to 0
+        x = 0;
+}
+
+void gameInProgressButton(void) {
+    if(strchr(correctWord, workingAlpha[x]) != NULL)
+    {
+
+        for(i = 0; i < strlen(correctWord); i++)            // For loop to find current index of correct guess in correctWord
+        {
+            if(correctWord[i] == workingAlpha[x])           // Comparing each letter in correctWord with our guess
+            {
+                strncpy(&word[i], &workingAlpha[x], 1);     // Using "i" to put our guess in the correct position
+                winCounter++;
+            }
+        }
+    }
+    else {
+        lifeCounter++;
+    }
+    removeChar(workingAlpha, workingAlpha[x]);
+}
+
+void mainMenuRotate(void) {
+
+}
+
+void mainMenuButton(void) {
+
+}
+
+void difficultyRotate(void) {
+
+}
+
+void difficultyButton(void) {
+
+}
+
+void leaderboardRotate(void) {
+
+}
+
+void leaderboardButton(void) {
+
 }
 
 void hangTheMan() {
@@ -189,6 +287,8 @@ void reset()                    // Clear view and reset all globals
     lifeCounter = 0;
     winCounter = 0;
     lifeCounterCheck = 0;
+    firstTime = 1;
+    state = 1;
 }
 
 void gameLose() {               // Game Lost State. Shows losing graphic, then resets.
