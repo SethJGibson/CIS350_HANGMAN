@@ -15,6 +15,12 @@
 #include <time.h>
 #include <stdlib.h>
 
+#define MENU_LENGTH 3
+#define DIFF_LENGTH 3
+#define EASY = 0
+#define MEDIUM = 1
+#define HARD = 2
+
 void Clock_Init48MHz(void);                         // MCLK and SMCLK initialization
 void SysTick_Init();                                // SysTick initialization
 void SysTick_Delay(uint16_t delayms);               // SysTick millisecond delay
@@ -44,6 +50,7 @@ const unsigned short PoCv2[] = {/* DATA GOES HERE */};  // IGNORE.
 
 int i = 0;                      // CodeComposer hates the i in for loops if its not up here
 int state = 0;                  // 0 = Game, 1 = Menu, 2 = Difficulty, 3 = Leaderboard
+int diffState = 0;              // 0 = Easy, 1 = Medium, 2 = Hard
 int firstTime = 1;
 volatile uint32_t x = 0;        // Iterator variable, decides the knobs place in the alphabet shown on screen
 char letter[5];                 // Current letter from alphabet to be shown on screen
@@ -52,6 +59,8 @@ char word[20] = "";
 char correctWord[20] = "TEST";      ///This is meant to hold the correct word to be guessed
 char alphabet[26] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 char workingAlpha[26];
+char *mainMenu[MENU_LENGTH] = {"Start", "Difficulty", "Leaderboard"}; 
+char *difficulty[3] = {"Easy", "Medium", "Hard"};
 int lifeCounter = 0;
 int winCounter = 0;
 int lifeCounterCheck = 0;
@@ -74,8 +83,7 @@ void main(void) {                                                   /* IGNORE TH
 
     ST7735_FillScreen(black);                       // Set black background
 
-    srand(time(NULL));                              //Initialize random function
-    strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
+    chooseWord();                                   //Selecting random word from bank based on difficulty
 
     strncpy(workingAlpha, alphabet, 26);
     clearWord();
@@ -187,7 +195,8 @@ void PORT1_IRQHandler(void)                         // Interrupt handler for the
     P1->IFG = 0;                                    // reset GPIO flag
 }
 
-void gameInProgressRotate(void) {
+void gameInProgressRotate(void)
+{
     if(x > (strlen(workingAlpha)))                                 // If x reached the end of the alphabet, reset to 0
         x = 0;
 }
@@ -211,27 +220,41 @@ void gameInProgressButton(void) {
     removeChar(workingAlpha, workingAlpha[x]);
 }
 
-void mainMenuRotate(void) {
+void mainMenuRotate(void)
+{
+    if(x > (MENU_LENGTH))                                 // If x reached the end of the menu options, reset to 0
+        x = 0;
+}
+
+//Menu selection "changes" state
+void mainMenuButton(void)
+{
+    if(x = 0)
+        state = 0;
+    else if (x = 1)
+        state = 2;
+    else if (x = 2)
+        state = 3;
+}
+
+void difficultyRotate(void)
+{
+    if(x > DIFF_LENGTH)                                 // If x reached the end of the difficulty options, reset to 0
+        x = 0;
+}
+
+void difficultyButton(void)
+{
+    diffState = x;                                  //Selected difficulty depends on value of x
+}
+
+void leaderboardRotate(void)
+{
 
 }
 
-void mainMenuButton(void) {
-
-}
-
-void difficultyRotate(void) {
-
-}
-
-void difficultyButton(void) {
-
-}
-
-void leaderboardRotate(void) {
-
-}
-
-void leaderboardButton(void) {
+void leaderboardButton(void)
+{
 
 }
 
@@ -329,6 +352,27 @@ void removeChar(char *str, char letter)     // Function for removing a letter fr
             }
         }
     }
+
+void chooseWord()
+{
+    char wordOnDeck[20] = "";
+    srand(time(NULL));                              //Initialize random function
+    //strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
+    if(diffState = EASY)
+    {
+        strcpy(correctWord, bank[rand() % 25]);
+    }
+    else
+    {
+        while(strlen(wordOnDeck) < 5 || strlen(wordOnDeck) > 8)
+        {
+            strcpy(wordOnDeck, bank[rand() % 25]);
+        }
+
+        strcpy(correctWord, wordOnDeck);
+    }
+}
+
 
 /* LOOK NO FURTHER. The rest is boring initialization shit that has no sway over logic. You're brain's just gonna hurt reading past this line. */
 
