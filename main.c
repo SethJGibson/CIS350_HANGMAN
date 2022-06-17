@@ -17,9 +17,6 @@
 
 #define MENU_LENGTH 3
 #define DIFF_LENGTH 3
-#define EASY = 0
-#define MEDIUM = 1
-#define HARD = 2
 
 void Clock_Init48MHz(void);                         // MCLK and SMCLK initialization
 void SysTick_Init();                                // SysTick initialization
@@ -40,10 +37,20 @@ void leaderboardButton(void);
 
 void hangTheMan();
 void clearWord();
+void reset();
 void gameLose();
 void gameWin();
 void removeChar(char *str, char letter);
+void chooseWord();
 void LCDLineWrite(int16_t a, int16_t b, char line[], int16_t textColor, int16_t backColor, uint8_t pixelSize, uint8_t lineLength);
+
+void I2C1_init (void);
+int I2C1_burstWrite (int slaveAddr, unsigned int memAddr, int byteCount, unsigned char* data);
+int I2C1_burstRead (int slaveAddr, unsigned int memAddr, int byteCount, unsigned char* data);
+void Display_EEPROM(char line[], int addr);
+void adjustLeaderBoard(void);
+void writeToLeaderBoard(char line[], int addr);
+void readFromLeaderBoard(int addr);
 
 const unsigned short PoCv2[] = {/* DATA GOES HERE */};  // IGNORE.
 // To show images, .bmp files need to be broken down into hex and called as char arrays. The data usually go here.
@@ -59,11 +66,27 @@ char word[20] = "";
 char correctWord[20] = "TEST";      ///This is meant to hold the correct word to be guessed
 char alphabet[26] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 char workingAlpha[26];
-char *mainMenu[MENU_LENGTH] = {"Start", "Difficulty", "Leaderboard"}; 
+char *mainMenu[MENU_LENGTH] = {"Start", "Difficulty", "Leaderboard"};
 char *difficulty[3] = {"Easy", "Medium", "Hard"};
 int lifeCounter = 0;
 int winCounter = 0;
 int lifeCounterCheck = 0;
+int EASY = 0, MEDIUM = 1, HARD = 2;
+
+// EEPROM
+#define EEPROM_SLAVE_ADDR_WRITE 0x50
+#define EEPROM_SLAVE_ADDR_READ  0x51
+
+unsigned char EEPROM_Write_1[9] = {"0000 AAA"};
+unsigned char EEPROM_Write_2[9] = {"0000 AAA"};
+unsigned char EEPROM_Write_3[9] = {"0000 AAA"};
+unsigned char EEPROM_Write_4[9] = {"0000 AAA"};
+unsigned char EEPROM_Write_5[9] = {"0000 AAA"};
+unsigned char EEPROM_Write_6[9] = {"0000 AAA"};
+
+unsigned char testRead[20];
+char Writeadd[5];
+char Readadd[5];
 
 void main(void) {                                                   /* IGNORE THIS BLOCK, its all boring hardware setup */
     WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;     // Stop WatchDog timer
@@ -73,6 +96,7 @@ void main(void) {                                                   /* IGNORE TH
     NVIC_EnableIRQ(PORT5_IRQn);                     // Turn on port 5 interrupts
     SetupPort1Interrupts();                         // Setup GPIO on port 1 interrupts
     NVIC_EnableIRQ(PORT1_IRQn);                     // Turn on port 1 interrupts
+    I2C1_init();
     __enable_irq();                                 // Enable all interrupts
                                                     /* OK now you can start paying attention again. */
 
@@ -114,6 +138,7 @@ void main(void) {                                                   /* IGNORE TH
                 break;
             case 1:
                 if (firstTime) {
+                    Output_Clear();
                     LCDLineWrite(16, 60, "MENU", white, black, 5, 5);   // Test string to show it entered menu state
                     firstTime = 0;
                 }
@@ -128,9 +153,23 @@ void main(void) {                                                   /* IGNORE TH
                 break;
             case 3:
                 if (firstTime) {
-
+//                    LCDLineWrite(16, 60, "LEADERBOARD", white, black, 3, 12);   // Test string to show it entered menu state
                     firstTime = 0;
                 }
+
+                //    writeToLeaderBoard(EEPROM_Write_1, 1);        // After the first write, the data is there, sitting on the chip
+                //    writeToLeaderBoard(EEPROM_Write_2, 2);        // now it just needs to be read
+                //    writeToLeaderBoard(EEPROM_Write_3, 3);
+                //    writeToLeaderBoard(EEPROM_Write_4, 4);
+                //    writeToLeaderBoard(EEPROM_Write_5, 5);
+                //    writeToLeaderBoard(EEPROM_Write_6, 6);
+
+                readFromLeaderBoard(1);
+                readFromLeaderBoard(2);
+                readFromLeaderBoard(3);
+                readFromLeaderBoard(4);
+                readFromLeaderBoard(5);
+                readFromLeaderBoard(6);
 
                 break;
         }
@@ -229,11 +268,11 @@ void mainMenuRotate(void)
 //Menu selection "changes" state
 void mainMenuButton(void)
 {
-    if(x = 0)
+    if(x == 0)
         state = 0;
-    else if (x = 1)
+    else if (x == 1)
         state = 2;
-    else if (x = 2)
+    else if (x == 2)
         state = 3;
 }
 
@@ -250,12 +289,12 @@ void difficultyButton(void)
 
 void leaderboardRotate(void)
 {
-
+    // Nothing happens here. Debating just removing it overall.
 }
 
 void leaderboardButton(void)
 {
-
+    reset();
 }
 
 void hangTheMan() {
@@ -298,7 +337,7 @@ void clearWord()                // Fills in word space with underscores based on
     }
 }
 
-void reset()                    // Clear view and reset all globals
+void reset(void)                    // Clear view and reset all globals
 {
     Output_Clear();
     x = 0;
@@ -358,7 +397,7 @@ void chooseWord()
     char wordOnDeck[20] = "";
     srand(time(NULL));                              //Initialize random function
     //strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
-    if(diffState = EASY)
+    if (diffState == EASY)
     {
         strcpy(correctWord, bank[rand() % 25]);
     }
@@ -373,6 +412,108 @@ void chooseWord()
     }
 }
 
+void I2C1_init (void)
+{
+    EUSCI_B1->CTLW0 |= 1;                   // disable UCB1 during config
+    EUSCI_B1->CTLW0 = 0x0F81;               // 7 bit slave addr, master, I2C, synch Mode, use SMCLK
+    EUSCI_B1-> BRW = 30;                    // set clock prescaler 3MHz/30 = 100kHz;
+
+    // Initialize P6.4 and P6.5 for I2C
+
+    P6->SEL0 |= 0x30;           // P6.4 SDA P6.5 SCL
+    P6->SEL1 &=~ 0x30;
+    EUSCI_B1 -> CTLW0 &=~ 1;    // enable UCB1 after configuration
+}
+
+int I2C1_burstWrite (int slaveAddr, unsigned int memAddr, int byteCount, unsigned char* data)
+{
+    if (byteCount <= 0)
+        return -1;                      // -1 if no write was performed
+
+    EUSCI_B1->I2CSA = slaveAddr;        // setup slave address
+    EUSCI_B1->CTLW0 |= 1;               // EUSCIB1 reset held for configuration
+    EUSCI_B1->CTLW0 |= 0x0010;          // enable transmitter
+    EUSCI_B1->CTLW0 |= 0x0002;          // Generate Start and send slave address
+    EUSCI_B1->CTLW0 &=~ 1;              // EUSCIB1 reset disabled for operation
+
+    while(!(EUSCI_B1->IFG & 2));        // wait until port is ready for transmit "waiting for ACK?"
+    EUSCI_B1->TXBUF =  memAddr;         // send memory address to slave
+
+    // send data one byte at a time //
+
+    do {
+        while(!(EUSCI_B1->IFG & 2));    // wait until port is ready for transmit "waiting for ACK?"
+        EUSCI_B1->TXBUF = *data++;      // send data to slave
+        byteCount--;                    // decrement byte count
+    } while (byteCount >0);
+
+    while(!(EUSCI_B1->IFG & 2));
+    EUSCI_B1->CTLW0 |= 0x0004;          // send STOP
+    while (EUSCI_B1->CTLW0 & 4);         // wait until stop and sent
+
+    return 0;
+}
+int I2C1_burstRead (int slaveAddr, unsigned int memAddr, int byteCount, unsigned char* data)
+{
+    if (byteCount <= 0)
+            return -1;                      // -1 if no write was performed
+
+        EUSCI_B1->CTLW0 |= 1;               // EUSCIB1 reset held for configuration
+        EUSCI_B1->I2CSA = slaveAddr;        // setup slave address
+        EUSCI_B1->CTLW0 |= 0x0010;          // enable transmitter       (Sets BIT 4 -- "Received break characters set UCRXIFG) GOOD
+        EUSCI_B1->CTLW0 |= 0x0002;          // Generate Start and send slave address    ("next frame transmitted is a break or break/synch")
+
+        EUSCI_B1->CTLW0 &=~ 1;              // EUSCIB1 reset disabled for operation
+
+        while (EUSCI_B1->CTLW0 & 2);        // wait until restart is finished
+        EUSCI_B1->TXBUF =  memAddr;         // send memory address to slave
+
+        while(!(EUSCI_B1->IFG & 2));        // wait until last transmit is complete
+        EUSCI_B1->CTLW0 &= ~0x00010;        // Enable receiver
+        EUSCI_B1->CTLW0 |= 0x0002;          // Generate RESTART and send Slave Address  ("next frame transmitted is a break or break/synch")
+        while (EUSCI_B1->CTLW0 & 2);        // wait until restart is finished
+
+        // Receive data one byte at a time
+        do {
+            if (byteCount ==1)
+                EUSCI_B1->CTLW0 |= 0x0004;      // setup to send Stop after last byte is received
+
+            while (!(EUSCI_B1->IFG & 1));       // wait until data is received
+            *data++ = EUSCI_B1->RXBUF;          // read the received data
+            byteCount--;
+        } while (byteCount);
+
+        while(EUSCI_B1 -> CTLW0 & 4);           // wait until STOP is sent
+
+        return 0;                               // no error //
+}
+
+void Display_EEPROM(char line[], int addr){
+    sprintf(Readadd, "%c%c%c%c%c%c%c%c", line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7]);
+    LCDLineWrite(15, (addr / 2), Readadd, ST7735_Color565(0xff,0xff,0xff), ST7735_Color565(0,0,0), 2, 9);   // then print that string
+}
+
+void adjustLeaderBoard(void) {
+    // Takes in leaderboard entry and position,
+    // logic reformats leaderboard arrays to fit it in, inserts it into the right spot, or slides scores down if higher score inserted
+    // also deletes last score in leaderboard if it needs to slide values down
+}
+
+void writeToLeaderBoard(char line[], int addr) {
+    addr *= 40;
+    I2C1_burstWrite(EEPROM_SLAVE_ADDR_WRITE, addr, 8, line);    // write leaderboard entry to EEPROM
+
+//    sprintf(Writeadd, "");  // No idea why, but earlier, no other prints to the LCD happened without these two lines
+//    LCDLineWrite(0, 0, Writeadd, ST7735_Color565(0xff,0xff,0xff), ST7735_Color565(0,0,0), 2, 9);
+}
+
+void readFromLeaderBoard(int addr) {
+    addr *= 40;
+    unsigned char EEPROM_Read[23];
+
+    I2C1_burstRead(EEPROM_SLAVE_ADDR_WRITE, addr, 8, EEPROM_Read);       // Read RTC Time Information from EEPROM
+    Display_EEPROM(EEPROM_Read, addr);
+}
 
 /* LOOK NO FURTHER. The rest is boring initialization shit that has no sway over logic. You're brain's just gonna hurt reading past this line. */
 
