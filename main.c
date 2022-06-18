@@ -392,24 +392,21 @@ void removeChar(char *str, char letter)     // Function for removing a letter fr
         }
     }
 
-void chooseWord()
-{
-    char wordOnDeck[20] = "";
-    srand(time(NULL));                              //Initialize random function
-    //strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
-    if (diffState == EASY)
+void chooseWord(){
+    srand(time(NULL));
+    if(diffState == EASY)
     {
-        strcpy(correctWord, bank[rand() % 25]);
+        strcpy(correctWord, bankE[rand() % 25]);
+    }
+    else if(diffState == MEDIUM)
+    {
+        strcpy(correctWord, bankM[rand() % 15]);
     }
     else
     {
-        while(strlen(wordOnDeck) < 5 || strlen(wordOnDeck) > 8)
-        {
-            strcpy(wordOnDeck, bank[rand() % 25]);
-        }
-
-        strcpy(correctWord, wordOnDeck);
+        strcpy(correctWord, bankH[rand() % 5]);
     }
+
 }
 
 void I2C1_init (void)
