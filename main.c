@@ -56,7 +56,7 @@ const unsigned short PoCv2[] = {/* DATA GOES HERE */};  // IGNORE.
 // To show images, .bmp files need to be broken down into hex and called as char arrays. The data usually go here.
 
 int i = 0;                      // CodeComposer hates the i in for loops if its not up here
-int state = 0;                  // 0 = Game, 1 = Menu, 2 = Difficulty, 3 = Leaderboard
+int state = 1;                  // 0 = Game, 1 = Menu, 2 = Difficulty, 3 = Leaderboard
 int diffState = 0;              // 0 = Easy, 1 = Medium, 2 = Hard
 int firstTime = 1;
 volatile uint32_t x = 0;        // Iterator variable, decides the knobs place in the alphabet shown on screen
@@ -77,12 +77,16 @@ int EASY = 0, MEDIUM = 1, HARD = 2;
 #define EEPROM_SLAVE_ADDR_WRITE 0x50
 #define EEPROM_SLAVE_ADDR_READ  0x51
 
-unsigned char EEPROM_Write_1[9] = {"0000 AAA"};
-unsigned char EEPROM_Write_2[9] = {"0000 AAA"};
-unsigned char EEPROM_Write_3[9] = {"0000 AAA"};
-unsigned char EEPROM_Write_4[9] = {"0000 AAA"};
-unsigned char EEPROM_Write_5[9] = {"0000 AAA"};
-unsigned char EEPROM_Write_6[9] = {"0000 AAA"};
+//char EEPROM_Write[6][8] = {
+//                                    "0000 AAA",
+//                                    "0000 AAA",
+//                                    " og str ",
+//                                    "0000 AAA",
+//                                    "0000 AAA",
+//                                    "0000 AAA"
+//};
+
+char EEPROM_Write[6][8];
 
 unsigned char testRead[20];
 char Writeadd[5];
@@ -118,6 +122,10 @@ void main(void) {                                                   /* IGNORE TH
             case 0:
                 if (firstTime) {
                     // Display Graphics
+//                    Output_Clear();
+//                    __delay_cycles(3000000);
+                    ST7735_FillScreen(black);
+//                    __delay_cycles(3000000);
                     firstTime = 0;
                 }
                 sprintf(letter, "%c", workingAlpha[x]);                 // Put letter in a string
@@ -138,15 +146,38 @@ void main(void) {                                                   /* IGNORE TH
                 break;
             case 1:
                 if (firstTime) {
-                    Output_Clear();
-                    LCDLineWrite(16, 60, "MENU", white, black, 5, 5);   // Test string to show it entered menu state
+//                    Output_Clear();
+                    ST7735_FillScreen(black);
+                    LCDLineWrite(20, 20, "HANGMAN", white, black, 2, 8);
+                    LCDLineWrite(50, 70, "Play", white, black, 1, 5);
+                    LCDLineWrite(33, 90, "Difficulty", white, black, 1, 11);   // Test string to show it entered menu state
+                    LCDLineWrite(30, 110, "Leaderboard", white, black, 1, 12);   // Test string to show it entered menu state
                     firstTime = 0;
+                }
+
+                switch (x) {
+                    case 0:
+                        LCDLineWrite(43, 70, ">", white, black, 1, 1);
+                        LCDLineWrite(26, 90, " ", white, black, 1, 1);
+                        LCDLineWrite(23, 110, " ", white, black, 1, 1);
+                        break;
+                    case 1:
+                        LCDLineWrite(43, 70, " ", white, black, 1, 1);
+                        LCDLineWrite(26, 90, ">", white, black, 1, 1);
+                        LCDLineWrite(23, 110, " ", white, black, 1, 1);
+                        break;
+                    case 2:
+                        LCDLineWrite(43, 70, " ", white, black, 1, 1);
+                        LCDLineWrite(26, 90, " ", white, black, 1, 1);
+                        LCDLineWrite(23, 110, ">", white, black, 1, 1);
+                        break;
                 }
 
                 break;
             case 2:
                 if (firstTime) {
-
+//                    Output_Clear();
+                    ST7735_FillScreen(black);
                     firstTime = 0;
                 }
 
@@ -154,6 +185,24 @@ void main(void) {                                                   /* IGNORE TH
             case 3:
                 if (firstTime) {
 //                    LCDLineWrite(16, 60, "LEADERBOARD", white, black, 3, 12);   // Test string to show it entered menu state
+//                    Output_Clear();
+                    ST7735_FillScreen(black);
+
+                    readFromLeaderBoard(1);
+                    readFromLeaderBoard(2);
+                    readFromLeaderBoard(3);
+                    readFromLeaderBoard(4);
+                    readFromLeaderBoard(5);
+                    readFromLeaderBoard(6);
+
+                    writeToLeaderBoard("  test2 ", 3);
+                    __delay_cycles(3000000);
+                    readFromLeaderBoard(3);
+                    __delay_cycles(3000000);
+//                    LCDLineWrite(0, 0, EEPROM_Write[2], white, black, 1, 8);   // Test string to show it entered menu state
+//                    printf("%s", EEPROM_Write[2]);
+                    printf("%s", EEPROM_Write[2]);
+
                     firstTime = 0;
                 }
 
@@ -163,13 +212,6 @@ void main(void) {                                                   /* IGNORE TH
                 //    writeToLeaderBoard(EEPROM_Write_4, 4);
                 //    writeToLeaderBoard(EEPROM_Write_5, 5);
                 //    writeToLeaderBoard(EEPROM_Write_6, 6);
-
-                readFromLeaderBoard(1);
-                readFromLeaderBoard(2);
-                readFromLeaderBoard(3);
-                readFromLeaderBoard(4);
-                readFromLeaderBoard(5);
-                readFromLeaderBoard(6);
 
                 break;
         }
@@ -274,6 +316,7 @@ void mainMenuButton(void)
         state = 2;
     else if (x == 2)
         state = 3;
+    reset();
 }
 
 void difficultyRotate(void)
@@ -285,6 +328,8 @@ void difficultyRotate(void)
 void difficultyButton(void)
 {
     diffState = x;                                  //Selected difficulty depends on value of x
+    state = 1;
+    reset();
 }
 
 void leaderboardRotate(void)
@@ -295,6 +340,7 @@ void leaderboardRotate(void)
 void leaderboardButton(void)
 {
     reset();
+    state = 1;
 }
 
 void hangTheMan() {
@@ -340,6 +386,7 @@ void clearWord()                // Fills in word space with underscores based on
 void reset(void)                    // Clear view and reset all globals
 {
     Output_Clear();
+    ST7735_FillScreen(ST7735_Color565(0,0,0));
     x = 0;
     memset(word, 0, 20);
     strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
@@ -350,7 +397,7 @@ void reset(void)                    // Clear view and reset all globals
     winCounter = 0;
     lifeCounterCheck = 0;
     firstTime = 1;
-    state = 1;
+//    state = 1;
 }
 
 void gameLose() {               // Game Lost State. Shows losing graphic, then resets.
@@ -360,6 +407,7 @@ void gameLose() {               // Game Lost State. Shows losing graphic, then r
         LCDLineWrite(0, 70, " YOU LOSE ", ST7735_Color565(0xff, 0, 0), ST7735_Color565(255, 244, 32), 2, 12);
         __delay_cycles(3000000);
     }
+    state = 1;
     reset();
 }
 
@@ -370,6 +418,7 @@ void gameWin() {               // Game Win State. Shows winning graphic, then re
         LCDLineWrite(0, 70, " YOU WIN! ", ST7735_Color565(0, 192, 0), ST7735_Color565(0, 32, 255), 2, 12);
         __delay_cycles(3000000);
     }
+    state = 1;
     reset();
 }
 
@@ -412,91 +461,41 @@ void chooseWord()
     }
 }
 
-void I2C1_init (void)
-{
-    EUSCI_B1->CTLW0 |= 1;                   // disable UCB1 during config
-    EUSCI_B1->CTLW0 = 0x0F81;               // 7 bit slave addr, master, I2C, synch Mode, use SMCLK
-    EUSCI_B1-> BRW = 30;                    // set clock prescaler 3MHz/30 = 100kHz;
-
-    // Initialize P6.4 and P6.5 for I2C
-
-    P6->SEL0 |= 0x30;           // P6.4 SDA P6.5 SCL
-    P6->SEL1 &=~ 0x30;
-    EUSCI_B1 -> CTLW0 &=~ 1;    // enable UCB1 after configuration
-}
-
-int I2C1_burstWrite (int slaveAddr, unsigned int memAddr, int byteCount, unsigned char* data)
-{
-    if (byteCount <= 0)
-        return -1;                      // -1 if no write was performed
-
-    EUSCI_B1->I2CSA = slaveAddr;        // setup slave address
-    EUSCI_B1->CTLW0 |= 1;               // EUSCIB1 reset held for configuration
-    EUSCI_B1->CTLW0 |= 0x0010;          // enable transmitter
-    EUSCI_B1->CTLW0 |= 0x0002;          // Generate Start and send slave address
-    EUSCI_B1->CTLW0 &=~ 1;              // EUSCIB1 reset disabled for operation
-
-    while(!(EUSCI_B1->IFG & 2));        // wait until port is ready for transmit "waiting for ACK?"
-    EUSCI_B1->TXBUF =  memAddr;         // send memory address to slave
-
-    // send data one byte at a time //
-
-    do {
-        while(!(EUSCI_B1->IFG & 2));    // wait until port is ready for transmit "waiting for ACK?"
-        EUSCI_B1->TXBUF = *data++;      // send data to slave
-        byteCount--;                    // decrement byte count
-    } while (byteCount >0);
-
-    while(!(EUSCI_B1->IFG & 2));
-    EUSCI_B1->CTLW0 |= 0x0004;          // send STOP
-    while (EUSCI_B1->CTLW0 & 4);         // wait until stop and sent
-
-    return 0;
-}
-int I2C1_burstRead (int slaveAddr, unsigned int memAddr, int byteCount, unsigned char* data)
-{
-    if (byteCount <= 0)
-            return -1;                      // -1 if no write was performed
-
-        EUSCI_B1->CTLW0 |= 1;               // EUSCIB1 reset held for configuration
-        EUSCI_B1->I2CSA = slaveAddr;        // setup slave address
-        EUSCI_B1->CTLW0 |= 0x0010;          // enable transmitter       (Sets BIT 4 -- "Received break characters set UCRXIFG) GOOD
-        EUSCI_B1->CTLW0 |= 0x0002;          // Generate Start and send slave address    ("next frame transmitted is a break or break/synch")
-
-        EUSCI_B1->CTLW0 &=~ 1;              // EUSCIB1 reset disabled for operation
-
-        while (EUSCI_B1->CTLW0 & 2);        // wait until restart is finished
-        EUSCI_B1->TXBUF =  memAddr;         // send memory address to slave
-
-        while(!(EUSCI_B1->IFG & 2));        // wait until last transmit is complete
-        EUSCI_B1->CTLW0 &= ~0x00010;        // Enable receiver
-        EUSCI_B1->CTLW0 |= 0x0002;          // Generate RESTART and send Slave Address  ("next frame transmitted is a break or break/synch")
-        while (EUSCI_B1->CTLW0 & 2);        // wait until restart is finished
-
-        // Receive data one byte at a time
-        do {
-            if (byteCount ==1)
-                EUSCI_B1->CTLW0 |= 0x0004;      // setup to send Stop after last byte is received
-
-            while (!(EUSCI_B1->IFG & 1));       // wait until data is received
-            *data++ = EUSCI_B1->RXBUF;          // read the received data
-            byteCount--;
-        } while (byteCount);
-
-        while(EUSCI_B1 -> CTLW0 & 4);           // wait until STOP is sent
-
-        return 0;                               // no error //
-}
+//void Display_EEPROM(char line[], int addr){
+//    sprintf(Readadd, "%c%c%c%c%c%c%c%c", line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7]);
+//    LCDLineWrite(15, (addr / 2), Readadd, ST7735_Color565(0xff,0xff,0xff), ST7735_Color565(0,0,0), 2, 9);   // then print that string
+//}
 
 void Display_EEPROM(char line[], int addr){
-    sprintf(Readadd, "%c%c%c%c%c%c%c%c", line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7]);
-    LCDLineWrite(15, (addr / 2), Readadd, ST7735_Color565(0xff,0xff,0xff), ST7735_Color565(0,0,0), 2, 9);   // then print that string
+    sprintf(EEPROM_Write[addr - 1], "%c%c%c%c%c%c%c%c", line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7]);
+    LCDLineWrite(15, (addr / 2), EEPROM_Write[addr - 1], ST7735_Color565(0xff,0xff,0xff), ST7735_Color565(0,0,0), 2, 9);   // then print that string
+//    printf("%s", EEPROM_Write[addr - 1]);
 }
 
-void adjustLeaderBoard(void) {
+void adjustLeaderBoard(char line[]) {
     // Takes in leaderboard entry and position,
     // logic reformats leaderboard arrays to fit it in, inserts it into the right spot, or slides scores down if higher score inserted
     // also deletes last score in leaderboard if it needs to slide values down
+
+    int place = 0;
+
+    //compare to strings in EEPROM_Write
+    for(i = 0; i < 6; i++)
+    {
+        if(strncmp(line, EEPROM_Write[i], 4) > 0)
+        {
+            place = i;
+            break;
+        }
+    }
+
+    //shifting words in EEPROM_Write after placing line
+    for(i = 5; i > place; i--)
+    {
+        strncpy(EEPROM_Write[i], EEPROM_Write[i - 1], 8);
+    }
+
+    strncpy(EEPROM_Write[place], line, 8); //placing word in EEPROM_Write
 }
 
 void writeToLeaderBoard(char line[], int addr) {
@@ -509,11 +508,17 @@ void writeToLeaderBoard(char line[], int addr) {
 
 void readFromLeaderBoard(int addr) {
     addr *= 40;
-    unsigned char EEPROM_Read[23];
+    char EEPROM_Read[23];
 
     I2C1_burstRead(EEPROM_SLAVE_ADDR_WRITE, addr, 8, EEPROM_Read);       // Read RTC Time Information from EEPROM
+
+//    printf("%s", EEPROM_Write[addr - 1]);
+    strncpy(EEPROM_Write[(addr - 1)], EEPROM_Read, 8);
+//    memcpy(EEPROM_Write[(addr - 1)], EEPROM_Read, 8);
+
     Display_EEPROM(EEPROM_Read, addr);
 }
+
 
 /* LOOK NO FURTHER. The rest is boring initialization shit that has no sway over logic. You're brain's just gonna hurt reading past this line. */
 
