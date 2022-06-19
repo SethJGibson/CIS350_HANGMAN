@@ -130,13 +130,39 @@ void main(void) {                                                   /* IGNORE TH
                 LCDLineWrite(16, 60, letter, white, black, 5, 1);   // then print that string
                 LCDLineWrite(16, 120, word, white, black, 2, 20);   // The full word goes here too
 
-                if (lifeCounter != lifeCounterCheck) {              // Checks input to see if change has been made
-                    hangTheMan();                                   // if there was, add a limb to the m a n
+                if (lifeCounter != lifeCounterCheck) {
+                if(ddiffState == EASY){ // EASY
+                    gameInProgressButton();
+                    hangTheManE();
                 }
+                else if(diffState == MEDIUM){ //.MED
+                    gameInProgressButton();
+                    hangTheManM();
+                }
+                else{               //HARD
+                    gameInProgressButton();
+                    hangTheManH();
+                }
+            }
 
-                if (lifeCounterCheck == 6) {                        // Checks if the hangman is completed
-                    gameLose();                                     // if he is, end the game
-                }
+                if(diffState == EASY){
+                     if (lifeCounter == lifeCounterCheck & lifeCounterCheck == 6) {  
+                     gameLose();
+                     break;                                    
+                     }
+                 }
+                if(diffState == MEDIUM){
+                     if (lifeCounter == lifeCounterCheck & lifeCounterCheck == 3) {    
+                     gameLose();
+                     break;                                  
+                     }
+                 }
+                if(iffState == HARD){
+                    if (lifeCounter == lifeCounterCheck & lifeCounterCheck == 2) {  
+                    gameLose();
+                    break;                                     
+                    }
+                 }
 
                 if (winCounter == len) {                        // Checks if the hangman is completed
                     gameWin();                                     // if he is, end the game
@@ -371,6 +397,40 @@ void hangTheMan() {
 
     lifeCounterCheck = lifeCounter;
 }
+
+void hangTheManM() {
+    uint16_t white = ST7735_Color565(255, 255, 255);    // LCD color macros for white
+
+    switch (lifeCounter) {
+       case 1:
+           ST7735_FillRect(82, 22, 15, 15, white);     // Head
+           ST7735_FillRect(82, 38, 15, 35, white);     // Torso
+          break;
+       case 2:
+           ST7735_FillRect(75, 38, 6, 30, white);      // ArmL
+           ST7735_FillRect(98, 38, 6, 30, white);      // ArmR
+          break;
+       case 3:
+           ST7735_FillRect(82, 74, 6, 30, white);      // LegL
+           ST7735_FillRect(91, 74, 6, 30, white);      // LegR
+          break;
+    }
+
+void hangTheManH() {
+    uint16_t white = ST7735_Color565(255, 255, 255);    // LCD color macros for white
+
+    switch (lifeCounter) {
+       case 1:
+           ST7735_FillRect(82, 22, 15, 15, white);     // Head
+           ST7735_FillRect(82, 38, 15, 35, white);     // Torso
+           ST7735_FillRect(75, 38, 6, 30, white);      // ArmL
+          break;
+       case 2:
+           ST7735_FillRect(98, 38, 6, 30, white);      // ArmR
+           ST7735_FillRect(82, 74, 6, 30, white);      // LegL
+           ST7735_FillRect(91, 74, 6, 30, white);      // LegR
+          break;
+    }
 
 void clearWord()                // Fills in word space with underscores based on word length
 {
