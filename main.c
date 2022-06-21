@@ -61,9 +61,11 @@ const unsigned short PoCv2[] = {/* DATA GOES HERE */};  // IGNORE.
 // To show images, .bmp files need to be broken down into hex and called as char arrays. The data usually go here.
 
 int i = 0;                      // CodeComposer hates the i in for loops if its not up here
-int state = 1;                  // 0 = Game, 1 = Menu, 2 = Difficulty, 3 = Leaderboard, 4 = Leaderboard Name Entry
+int state = 4;                  // 0 = Game, 1 = Menu, 2 = Difficulty, 3 = Leaderboard, 4 = Leaderboard Name Entry
 int diffState = 0;              // 0 = Easy, 1 = Medium, 2 = Hard
 int firstTime = 1;
+int score = 0;
+char scoreString[4];
 volatile uint32_t x = 0;        // Iterator variable, decides the knobs place in the alphabet shown on screen
 char letter[5];                 // Current letter from alphabet to be shown on screen
 int len = 0;
@@ -95,7 +97,7 @@ unsigned char testRead[20];
 char Writeadd[5];
 char Readadd[5];
 int nameSelect = 0;
-char nameIterator;
+char nameCharSelect[3];
 
 void main(void) {                                                   /* IGNORE THIS BLOCK, its all boring hardware setup */
     WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;     // Stop WatchDog timer
@@ -109,11 +111,17 @@ void main(void) {                                                   /* IGNORE TH
     __enable_irq();                                 // Enable all interrupts
                                                     /* OK now you can start paying attention again. */
 
+//    readFromLeaderBoard(1);
+//    readFromLeaderBoard(2);   // Uncomment this when Display_EEPROM() is separate from this function
+//    readFromLeaderBoard(3);
+//    readFromLeaderBoard(4);
+//    readFromLeaderBoard(5);
+//    readFromLeaderBoard(6);
+
     Output_Clear();                                 // Initial command to clear screen before anything
 
     uint16_t white = ST7735_Color565(255, 255, 255);    // LCD color macros for black and white
     uint16_t black = ST7735_Color565(0,0,0);
-
     ST7735_FillScreen(black);                       // Set black background
 
     chooseWord();                                   //Selecting random word from bank based on difficulty
@@ -127,6 +135,7 @@ void main(void) {                                                   /* IGNORE TH
             case 0:
                 if (firstTime && state == 0) {
                     ST7735_FillScreen(black);
+                    LCDLineWrite(10, 5, "    SCORE:    ", white, black, 1, 14);
                     firstTime = 0;
                 }
                 sprintf(letter, "%c", workingAlpha[x]);                 // Put letter in a string
@@ -172,6 +181,10 @@ void main(void) {                                                   /* IGNORE TH
                 if (winCounter == len) {                        // Checks if the hangman is completed
                     gameWin();                                     // if he is, end the game
                 }
+
+                sprintf(scoreString, "%04d", score);
+                LCDLineWrite(70, 5, scoreString, white, black, 1, 4);
+
                 break;
             case 1:
                 if (firstTime && state == 1) {
@@ -261,6 +274,7 @@ void main(void) {                                                   /* IGNORE TH
             case 4:
                 if (firstTime && state == 4) {
                     ST7735_FillScreen(black);
+                    sprintf(scoreString, "%04d", score);
 
                     LCDLineWrite(28, 10, "YOU MADE THE",
                                 ST7735_Color565(0xff, 0xff, 0xff),
@@ -268,9 +282,12 @@ void main(void) {                                                   /* IGNORE TH
                     LCDLineWrite(28, 20, "LEADERBOARD!",
                                 ST7735_Color565(0xff, 0xff, 0xff),
                                 ST7735_Color565(0, 0, 0), 1, 12);
-                    LCDLineWrite(10, 40, "YOUR SCORE: ",
+                    LCDLineWrite(12, 40, "YOUR SCORE: ",
                                 ST7735_Color565(0xff, 0xff, 0xff),
                                 ST7735_Color565(0, 0, 0), 1, 12);
+                    LCDLineWrite(90, 40, scoreString,
+                                ST7735_Color565(0xff, 0xff, 0xff),
+                                ST7735_Color565(0, 0, 0), 1, 4);
                     LCDLineWrite(10, 130, "ENTER NAME:    / 3",
                                 ST7735_Color565(0xff, 0xff, 0xff),
                                 ST7735_Color565(0, 0, 0), 1, 19);
@@ -278,11 +295,23 @@ void main(void) {                                                   /* IGNORE TH
                     firstTime = 0;
                 }
 
-                sprintf(nameIterator, "%d", (nameSelect + 1));
+//                sprintf(nameIterator, "%d", (nameSelect + 1));
 //                sprintf(nameIterator, "%d", x);
-                LCDLineWrite(80, 130, nameIterator,
-                                                ST7735_Color565(0xff, 0xff, 0xff),
-                                                ST7735_Color565(0, 0, 0), 1, 2);
+//                LCDLineWrite(80, 130, nameIterator,
+//                                                ST7735_Color565(0xff, 0xff, 0xff),
+//                                                ST7735_Color565(0, 0, 0), 1, 2);
+
+                switch(nameSelect) {
+                    case (0):
+                        LCDLineWrite(88, 130, "1", white, black, 1, 1);
+                        break;
+                    case (1):
+                        LCDLineWrite(88, 130, "2", white, black, 1, 1);
+                        break;
+                    case (2):
+                        LCDLineWrite(88, 130, "3", white, black, 1, 1);
+                        break;
+                }
 
                 sprintf(letter, "%c", alphabet[x]);                 // Put letter in a string
                 LCDLineWrite(53, 70, letter, white, black, 5, 1);   // then print that string
@@ -372,11 +401,13 @@ void gameInProgressButton(void) {
             {
                 strncpy(&word[i], &workingAlpha[x], 1);     // Using "i" to put our guess in the correct position
                 winCounter++;
+                score += 1000;
             }
         }
     }
     else {
         lifeCounter++;
+        score -= 250;
     }
     removeChar(workingAlpha, workingAlpha[x]);
 }
@@ -420,7 +451,6 @@ void leaderboardRotate(void)
 void leaderboardButton(void)
 {
     state = 1;
-//    __delay_cycles(30000);
     reset();
 }
 
@@ -432,9 +462,17 @@ void leaderboardNameEntryRotate(void)
 
 void leaderboardNameEntryButton(void)
 {
-    state = 1;
-//    __delay_cycles(30000);
-    reset();
+    nameCharSelect[nameSelect] = alphabet[x];
+    nameSelect++;
+
+//    LCDLineWrite(16, 60, nameCharSelect, ST7735_Color565(0xff, 0xff, 0xff),
+//                         ST7735_Color565(0, 0, 0), 1, 3);
+
+    if (nameSelect > 2) {
+        // submit string to leaderboard & stuff
+        state = 1;
+        reset();
+    }
 }
 
 void hangTheManE() {
@@ -532,6 +570,7 @@ void reset(void)                    // Clear view and reset all globals
     winCounter = 0;
     lifeCounterCheck = 0;
     firstTime = 1;
+    score = 0;
 //    state = 1;
 }
 
