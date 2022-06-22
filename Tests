@@ -1,0 +1,161 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <time.h>
+#include <assert.h>
+#include <stdbool.h>
+#include "WordBank.h"
+
+
+char correctWord[20] = "TEST";
+char alphabet[26] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+char workingAlpha[26] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+char word[20] = "TEST";
+char EEPROM_Write[5][9] = {"5555 AAA", "4444 AAB", "3333 ABA", "1111 ABB"};
+char *leaderboardLine = {"2222 BAB"};
+char x;
+
+int main()
+{
+
+    ///Clear word test
+
+    puts("********CLEAR WORD TEST********");
+
+    srand(time(NULL));
+    strcpy(correctWord, bank[rand() % 25]);
+    printf("CORRECT WORD Before: %s\n", word);
+    clearWord();
+    assert(strcmp(word, "____")); ///Checking if word was cleared
+    printf("CORRECT WORD After: %s\n\n", word);
+
+    ///RemoveChar test
+
+    puts("********REMOVE CHARACTER TEST********");
+
+    printf("Length Before removeChar: %d\n", strlen(workingAlpha));
+    removeChar(workingAlpha, workingAlpha[x]);
+    printf("Length After removeChar: %d\n\n", strlen(workingAlpha));
+
+    ///adjustLeaderboard Test
+
+    puts("********ADJUST LEADERBOARD TEST********");
+
+    puts("Before adjustLeaderboard: ");
+    for(int i = 0; i < strlen(EEPROM_Write); i++)
+    {
+        puts(EEPROM_Write[i]);
+    }
+
+    adjustLeaderBoard(leaderboardLine);
+    puts("\nAfter adjustLeaderboard");
+
+    for(int i = 0; i < strlen(EEPROM_Write); i++)
+    {
+        puts(EEPROM_Write[i]);
+    }
+
+    puts("\n");
+
+    ///Alphabet test
+
+    puts("********ALPHABET TEST********");
+
+    for(int i = 65; i <= 90; i++)
+    {
+        assert(strchr(alphabet, i));
+    }
+
+    puts("\nAll letters present");
+
+    ///Letter Selection Test
+
+    puts("********LETTER SELECT TEST********");
+
+    printf("%d", letterSelect(4));
+
+    return 0;
+}
+//
+void clearWord()                // Fills in word space with underscores based on word length
+{
+    int len = 0;
+    for(int i = 0; correctWord[i] != '\0'; i++)     // get word length
+    {
+        len++;
+    }
+    for(int i = 0; i < len; i++)                    // then print the underscores accordingly
+    {
+        strncpy(&word[i], "_", 1);
+    }
+}
+
+void adjustLeaderBoard(char line[])
+{
+    // Takes in leaderboard entry and position,
+    // logic reformats leaderboard arrays to fit it in, inserts it into the right spot, or slides scores down if higher score inserted
+    // also deletes last score in leaderboard if it needs to slide values down
+
+    int place = 0;
+
+    //compare to strings in EEPROM_Write
+    for(int i = 0; i < 6; i++)
+    {
+        if(strncmp(line, EEPROM_Write[i], 4) > 0)
+        {
+            place = i;
+            break;
+        }
+    }
+
+    //shifting words in EEPROM_Write after placing line
+    for(int i = 5; i > place; i--)
+    {
+        strncpy(EEPROM_Write[i], EEPROM_Write[i - 1], 8);
+    }
+
+    strncpy(EEPROM_Write[place], line, 8); //placing word in EEPROM_Write
+}
+
+void removeChar(char *str, char charToRemove)
+{
+    int i, j;
+    int len = strlen(str);
+
+    for(i = 0; i < len; i++)
+    {
+        if(str[i] == charToRemove)
+        {
+            for(j = i; j < len; j++)
+            {
+                str[j] = str[j + 1];
+            }
+            len--;
+            i--;
+        }
+    }
+}
+
+
+int letterSelect(int x)
+{
+    //printf("Hello");
+    for(int i = 0; i < strlen(correctWord); i++)                ///For loop to find current index of correct guess in correctWord
+    {
+        if(correctWord[i] == workingAlpha[x])                       ///Comparing each letter in correctWord with our guess
+        {
+            strncpy(&word[i], &workingAlpha[x], 1);                 ///Using "i" to put our guess in the correct position
+        }
+    }
+    // removeChar(workingAlpha, workingAlpha[x]);
+    //printf("%s", word);
+
+    //putchar(workingAlpha[x]);
+
+    if(strchr(correctWord, workingAlpha[x]))
+        return 1;
+    else
+        return 0;
+}
+
