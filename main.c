@@ -37,7 +37,6 @@ void leaderboardButton(void);
 void leaderboardNameEntryRotate(void);
 void leaderboardNameEntryButton(void);
 
-//void hangTheMan();
 void hangTheManE();
 void hangTheManM();
 void hangTheManH();
@@ -115,22 +114,8 @@ void main(void) {                                                   /* IGNORE TH
     uint16_t white = ST7735_Color565(255, 255, 255);    // LCD color macros for black and white
     uint16_t black = ST7735_Color565(0,0,0);
 
-//    writeToLeaderBoard("6000 AAA", 1);
-//    writeToLeaderBoard("5000 BBB", 2);
-//    writeToLeaderBoard("4000 CCC", 3);
-//    writeToLeaderBoard("3000 DDD", 4);
-//    writeToLeaderBoard("2000 EEE", 5);
-//    writeToLeaderBoard("1000 FFF", 6);
-
-//    writeToLeaderBoard(EEPROM_Write[0], 1);
-//    writeToLeaderBoard(EEPROM_Write[1], 2);
-//    writeToLeaderBoard(EEPROM_Write[2], 3);
-//    writeToLeaderBoard(EEPROM_Write[3], 4);
-//    writeToLeaderBoard(EEPROM_Write[4], 5);
-//    writeToLeaderBoard(EEPROM_Write[5], 6);
-
     readFromLeaderBoard(1);
-    readFromLeaderBoard(2);   // Uncomment this when Display_EEPROM() is separate from this function
+    readFromLeaderBoard(2);
     readFromLeaderBoard(3);
     readFromLeaderBoard(4);
     readFromLeaderBoard(5);
@@ -154,6 +139,7 @@ void main(void) {                                                   /* IGNORE TH
                     LCDLineWrite(10, 5, "    SCORE:    ", white, black, 1, 14);
                     firstTime = 0;
                 }
+
                 sprintf(letter, "%c", workingAlpha[x]);                 // Put letter in a string
                 LCDLineWrite(16, 60, letter, white, black, 5, 1);   // then print that string
                 LCDLineWrite(16, 120, word, white, black, 2, 20);   // The full word goes here too
@@ -178,7 +164,6 @@ void main(void) {                                                   /* IGNORE TH
                  }
                 if(diffState == MEDIUM){
                     if (lifeCounter == lifeCounterCheck & lifeCounterCheck == 3) {
-//                    if (lifeCounter == lifeCounterCheck & lifeCounterCheck == 3) {
                         gameLose();
                         break;
                     }
@@ -190,16 +175,12 @@ void main(void) {                                                   /* IGNORE TH
                     }
                  }
 
-//                if (lifeCounterCheck == 6) {                        // Checks if the hangman is completed
-//                    gameLose();                                     // if he is, end the game
-//                }
-
                 if (winCounter == len) {                        // Checks if the hangman is completed
                     gameWin();                                     // if he is, end the game
                 }
 
-                sprintf(scoreString, "%04d", score);
-                LCDLineWrite(70, 5, scoreString, white, black, 1, 4);
+                sprintf(scoreString, "%5d", score);
+                LCDLineWrite(70, 5, scoreString, white, black, 1, 5);
 
                 break;
             case 1:
@@ -282,13 +263,6 @@ void main(void) {                                                   /* IGNORE TH
                     readFromLeaderBoard(6);
                     Display_EEPROM(EEPROM_Write[5], 6);
 
-//                    writeToLeaderBoard("hehehoho", 3);
-//                    __delay_cycles(3000000);
-//                    readFromLeaderBoard(3);
-//                    __delay_cycles(3000000);
-//                    LCDLineWrite(0, 0, EEPROM_Write[2], white, black, 1, 8);   // Test string to show it entered menu state
-//                    printf("%s", EEPROM_Write[2]);
-
                     firstTime = 0;
                 }
 
@@ -316,12 +290,6 @@ void main(void) {                                                   /* IGNORE TH
 
                     firstTime = 0;
                 }
-
-//                sprintf(nameIterator, "%d", (nameSelect + 1));
-//                sprintf(nameIterator, "%d", x);
-//                LCDLineWrite(80, 130, nameIterator,
-//                                                ST7735_Color565(0xff, 0xff, 0xff),
-//                                                ST7735_Color565(0, 0, 0), 1, 2);
 
                 switch(nameSelect) {
                     case (0):
@@ -467,7 +435,7 @@ void difficultyButton(void)
 
 void leaderboardRotate(void)
 {
-    // Nothing happens here. Debating just removing it overall.
+    // ROT47 *@F 2C6 2 362FE:7F= >2?]
 }
 
 void leaderboardButton(void)
@@ -486,9 +454,6 @@ void leaderboardNameEntryButton(void)
 {
     nameCharSelect[nameSelect] = alphabet[x];
     nameSelect++;
-
-//    LCDLineWrite(16, 60, nameCharSelect, ST7735_Color565(0xff, 0xff, 0xff),
-//                         ST7735_Color565(0, 0, 0), 1, 3);
 
     if (nameSelect > 2) {
         sprintf(leaderBoardEntry, "%04d %c%c%c", score, nameCharSelect[0], nameCharSelect[1], nameCharSelect[2]);
@@ -593,17 +558,14 @@ void reset(void)                    // Clear view and reset all globals
     ST7735_FillScreen(ST7735_Color565(0,0,0));
     x = 0;
     memset(word, 0, 20);
-//    strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
     chooseWord();
     clearWord();
-    // clear or reassign correctWord from wordlist. this can be function or we do it right here
     strncpy(workingAlpha, alphabet, 26);    // restore the working alphabet to all 26 letters
     lifeCounter = 0;
     winCounter = 0;
     lifeCounterCheck = 0;
     firstTime = 1;
     score = 0;
-//    state = 1;
 }
 
 void gameLose() {               // Game Lost State. Shows losing graphic, then resets.
@@ -655,26 +617,6 @@ void removeChar(char *str, char letter)     // Function for removing a letter fr
         }
     }
 
-//void chooseWord()
-//{
-//    char wordOnDeck[20] = "";
-//    srand(time(NULL));                              //Initialize random function
-//    //strcpy(correctWord, bank[rand() % 25]);         //copy random word from bank to correctWord
-//    if (diffState == EASY)
-//    {
-//        strcpy(correctWord, bank[rand() % 25]);
-//    }
-//    else
-//    {
-//        while(strlen(wordOnDeck) < 5 || strlen(wordOnDeck) > 8)
-//        {
-//            strcpy(wordOnDeck, bank[rand() % 25]);
-//        }
-//
-//        strcpy(correctWord, wordOnDeck);
-//    }
-//}
-
 void chooseWord(){
     srand(time(NULL));
     if(diffState == EASY)
@@ -691,15 +633,9 @@ void chooseWord(){
     }
 }
 
-//void Display_EEPROM(char line[], int addr){
-//    sprintf(Readadd, "%c%c%c%c%c%c%c%c", line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7]);
-//    LCDLineWrite(15, (addr / 2), Readadd, ST7735_Color565(0xff,0xff,0xff), ST7735_Color565(0,0,0), 2, 9);   // then print that string
-//}
-
 void Display_EEPROM(char line[], int addr) {
     sprintf(EEPROM_Write[addr - 1], "%c%c%c%c%c%c%c%c", line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7]);
     LCDLineWrite(15, (addr * 20), EEPROM_Write[addr - 1], ST7735_Color565(0xff,0xff,0xff), ST7735_Color565(0,0,0), 2, 9);   // then print that string
-//    printf("%s", EEPROM_Write[addr - 1]);
 }
 
 void adjustLeaderBoard(char line[]) {
@@ -708,12 +644,6 @@ void adjustLeaderBoard(char line[]) {
     //compare to strings in EEPROM_Write
     for(i = 0; i < 6; i++)
     {
-//        if(strncmp(line, EEPROM_Write[i], 4) > 0)       // if the line is greater than EEPROM_WRITE score
-//        {
-//            place = i;
-//            break;
-//        }
-//        if (strncmp(EEPROM_Write[i], line, 4) < 0)
         if (strncmp(EEPROM_Write[i], line, 4) > 0)
             place++;
         if (strncmp(EEPROM_Write[i], line, 4) == 0) {
