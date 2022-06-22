@@ -15,6 +15,16 @@ char word[20] = "TEST";
 char EEPROM_Write[5][9] = {"5555 AAA", "4444 AAB", "3333 ABA", "1111 ABB"};
 char *leaderboardLine = {"2222 BAB"};
 char x;
+diffState=1;
+easy=1;
+med=2;
+hard=3;
+char easy_test_pass[20] = "WINS";
+char med_test_pass[20] = "FIGHT";
+char hard_test_pass[20] = "ONGOING";
+char easy_test_fail[20] = "FAIL";
+char med_test_fail[20] = "FAIL";
+char hard_test_fail[20] = "FAIL";
 
 int main()
 {
@@ -74,6 +84,18 @@ int main()
     puts("********LETTER SELECT TEST********");
 
     printf("%d", letterSelect(4));
+    
+    chooseWord_testEasy_Pass();
+    printf("\n");
+    chooseWord_testEasy_Fail();
+    printf("\n");
+    chooseWord_testMed_Pass();
+    printf("\n");
+    chooseWord_testMed_Fail();
+    printf("\n");
+    chooseWord_testHard_Pass();
+    printf("\n");
+    chooseWord_testHard_Fail();
 
     return 0;
 }
@@ -157,5 +179,85 @@ int letterSelect(int x)
         return 1;
     else
         return 0;
+}
+
+//easy test
+void chooseWord_testEasy_Pass(){
+    srand(time(NULL));
+    if(easy == 1){
+        strcpy(correctWord, bank_EasyTest[rand() % 1]);
+        if(strcmp(correctWord ,easy_test_pass)==0){
+            printf("Easy test has passed. End of Test | ");
+        }
+        else{
+            printf("Easy test failed word was %s should be WINS. ", correctWord);
+        }
+    }
+}
+
+void chooseWord_testEasy_Fail(){
+    srand(time(NULL));
+    if(easy == 1){
+        strcpy(correctWord, bank_EasyTest[rand() % 1]);
+        if(strcmp(correctWord ,easy_test_fail)==0){
+            printf("Easy test has passed ");
+        }
+        else{
+            printf("Easy test failed word was %s should be WINS. END OF TEST | ", easy_test_fail);
+        }
+    }
+}
+// MEDIUM
+void chooseWord_testMed_Pass(){
+    srand(time(NULL));
+    if(med == 2){
+        strcpy(correctWord, bank_MedTest[rand() % 1]);
+        if(strcmp(correctWord ,med_test_pass)==0){
+            printf("Medium test has passed. End of Test | ");
+        }
+        else{
+            printf("Medium test failed word was %s should be FIGHTS. ", correctWord);
+        }
+    }
+}
+
+void chooseWord_testMed_Fail(){
+    srand(time(NULL));
+    if(med == 2){
+        strcpy(correctWord, bank_MedTest[rand() % 1]);
+        if(strcmp(correctWord ,med_test_fail)==0){
+            printf("Med test has passed End of Test ");
+        }
+        else{
+            printf("medium test failed word was %s should be FIGHTS. END OF TEST | ", med_test_fail);
+        }
+    }
+}
+
+//HARD
+void chooseWord_testHard_Pass(){
+    srand(time(NULL));
+    if(hard == 3){
+        strcpy(correctWord, bank_HardTest[rand() % 1]);
+        if(strcmp(correctWord ,hard_test_pass)==0){
+            printf("Hard test has passed. End of Test | ");
+        }
+        else{
+            printf("Hard test failed word was %s should be FIGHTS. ", correctWord);
+        }
+    }
+}
+
+void chooseWord_testHard_Fail(){
+    srand(time(NULL));
+    if(hard == 3){
+        strcpy(correctWord, bank_HardTest[rand() % 1]);
+        if(strcmp(correctWord ,hard_test_fail)==0){
+            printf("Hard test has passed End of Test ");
+        }
+        else{
+            printf("Hard test failed word was %s should be FIGHTS. END OF TEST | ", hard_test_fail);
+        }
+    }
 }
 
