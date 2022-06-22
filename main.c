@@ -61,7 +61,7 @@ const unsigned short PoCv2[] = {/* DATA GOES HERE */};  // IGNORE.
 // To show images, .bmp files need to be broken down into hex and called as char arrays. The data usually go here.
 
 int i = 0;                      // CodeComposer hates the i in for loops if its not up here
-int state = 4;                  // 0 = Game, 1 = Menu, 2 = Difficulty, 3 = Leaderboard, 4 = Leaderboard Name Entry
+int state = 1;                  // 0 = Game, 1 = Menu, 2 = Difficulty, 3 = Leaderboard, 4 = Leaderboard Name Entry
 int diffState = 0;              // 0 = Easy, 1 = Medium, 2 = Hard
 int firstTime = 1;
 int score = 0;
@@ -98,6 +98,7 @@ char Writeadd[5];
 char Readadd[5];
 int nameSelect = 0;
 char nameCharSelect[3];
+char leaderBoardEntry[] = "0000 AAA";     // maybe initialize, before it was [8] and no start
 
 void main(void) {                                                   /* IGNORE THIS BLOCK, its all boring hardware setup */
     WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;     // Stop WatchDog timer
@@ -111,17 +112,25 @@ void main(void) {                                                   /* IGNORE TH
     __enable_irq();                                 // Enable all interrupts
                                                     /* OK now you can start paying attention again. */
 
-//    readFromLeaderBoard(1);
-//    readFromLeaderBoard(2);   // Uncomment this when Display_EEPROM() is separate from this function
-//    readFromLeaderBoard(3);
-//    readFromLeaderBoard(4);
-//    readFromLeaderBoard(5);
-//    readFromLeaderBoard(6);
+    uint16_t white = ST7735_Color565(255, 255, 255);    // LCD color macros for black and white
+    uint16_t black = ST7735_Color565(0,0,0);
+
+//    writeToLeaderBoard("6000 AAA", 1);
+//    writeToLeaderBoard("5000 BBB", 2);
+//    writeToLeaderBoard("4000 CCC", 3);
+//    writeToLeaderBoard("3000 DDD", 4);
+//    writeToLeaderBoard("2000 EEE", 5);
+//    writeToLeaderBoard("1000 FFF", 6);
+
+    readFromLeaderBoard(1);
+    readFromLeaderBoard(2);   // Uncomment this when Display_EEPROM() is separate from this function
+    readFromLeaderBoard(3);
+    readFromLeaderBoard(4);
+    readFromLeaderBoard(5);
+    readFromLeaderBoard(6);
 
     Output_Clear();                                 // Initial command to clear screen before anything
 
-    uint16_t white = ST7735_Color565(255, 255, 255);    // LCD color macros for black and white
-    uint16_t black = ST7735_Color565(0,0,0);
     ST7735_FillScreen(black);                       // Set black background
 
     chooseWord();                                   //Selecting random word from bank based on difficulty
@@ -254,11 +263,17 @@ void main(void) {                                                   /* IGNORE TH
                     ST7735_FillScreen(black);
 
                     readFromLeaderBoard(1);
+                    Display_EEPROM(EEPROM_Write[0], 1);
                     readFromLeaderBoard(2);
+                    Display_EEPROM(EEPROM_Write[1], 2);
                     readFromLeaderBoard(3);
+                    Display_EEPROM(EEPROM_Write[2], 3);
                     readFromLeaderBoard(4);
+                    Display_EEPROM(EEPROM_Write[3], 4);
                     readFromLeaderBoard(5);
+                    Display_EEPROM(EEPROM_Write[4], 5);
                     readFromLeaderBoard(6);
+                    Display_EEPROM(EEPROM_Write[5], 6);
 
 //                    writeToLeaderBoard("hehehoho", 3);
 //                    __delay_cycles(3000000);
@@ -469,7 +484,17 @@ void leaderboardNameEntryButton(void)
 //                         ST7735_Color565(0, 0, 0), 1, 3);
 
     if (nameSelect > 2) {
-        // submit string to leaderboard & stuff
+        sprintf(leaderBoardEntry, "%04d %c%c%c", score, nameCharSelect[0], nameCharSelect[1], nameCharSelect[2]);
+
+        adjustLeaderBoard(leaderBoardEntry);
+
+        writeToLeaderBoard(EEPROM_Write[0], 1);
+        writeToLeaderBoard(EEPROM_Write[1], 2);
+        writeToLeaderBoard(EEPROM_Write[2], 3);
+        writeToLeaderBoard(EEPROM_Write[3], 4);
+        writeToLeaderBoard(EEPROM_Write[4], 5);
+        writeToLeaderBoard(EEPROM_Write[5], 6);
+
         state = 1;
         reset();
     }
@@ -592,8 +617,16 @@ void gameWin() {               // Game Win State. Shows winning graphic, then re
         LCDLineWrite(0, 70, " YOU WIN! ", ST7735_Color565(0, 192, 0), ST7735_Color565(0, 32, 255), 2, 12);
         __delay_cycles(3000000);
     }
-    state = 1;
-    reset();
+
+    if (score > 0) {
+        state = 4;
+        x = 0;
+        firstTime = 1;
+    }
+    else {
+        state = 1;
+        reset();
+    }
 }
 
 void removeChar(char *str, char letter)     // Function for removing a letter from the available working alphabet after a selection
@@ -668,9 +701,16 @@ void adjustLeaderBoard(char line[]) {
     //compare to strings in EEPROM_Write
     for(i = 0; i < 6; i++)
     {
-        if(strncmp(line, EEPROM_Write[i], 4) > 0)
-        {
-            place = i;
+//        if(strncmp(line, EEPROM_Write[i], 4) > 0)       // if the line is greater than EEPROM_WRITE score
+//        {
+//            place = i;
+//            break;
+//        }
+//        if (strncmp(EEPROM_Write[i], line, 4) < 0)
+        if (strncmp(EEPROM_Write[i], line, 4) > 0)
+            place++;
+        if (strncmp(EEPROM_Write[i], line, 4) == 0) {
+            place++;
             break;
         }
     }
@@ -679,6 +719,7 @@ void adjustLeaderBoard(char line[]) {
     for(i = 5; i > place; i--)
     {
         strncpy(EEPROM_Write[i], EEPROM_Write[i - 1], 8);
+
     }
 
     strncpy(EEPROM_Write[place], line, 8); //placing word in EEPROM_Write
@@ -686,7 +727,8 @@ void adjustLeaderBoard(char line[]) {
 
 void writeToLeaderBoard(char line[], int memAddr) {
     memAddr *= 40;
-    I2C1_burstWrite(EEPROM_SLAVE_ADDR_WRITE, memAddr, 8, line);    // write leaderboard entry to EEPROM
+    I2C1_burstWrite(EEPROM_SLAVE_ADDR_WRITE, memAddr, 8, (unsigned char)line);    // write leaderboard entry to EEPROM
+//    LCDLineWrite(20, 20, "FLAG1", ST7735_Color565(0xff, 0xff, 0xff), ST7735_Color565(0, 0, 0), 2, 5);
 
 //    sprintf(Writeadd, "");  // No idea why, but earlier, no other prints to the LCD happened without these two lines
 //    LCDLineWrite(0, 0, Writeadd, ST7735_Color565(0xff,0xff,0xff), ST7735_Color565(0,0,0), 2, 9);
@@ -703,7 +745,7 @@ void readFromLeaderBoard(int addr) {
     strncpy(EEPROM_Write[(addr - 1)], EEPROM_Read, 8);
 //    memcpy(EEPROM_Write[(addr - 1)], EEPROM_Read, 8);
 
-    Display_EEPROM(EEPROM_Read, addr);
+//    Display_EEPROM(EEPROM_Read, addr);
 }
 
 /* LOOK NO FURTHER. The rest is boring initialization shit that has no sway over logic. You're brain's just gonna hurt reading past this line. */
@@ -827,6 +869,10 @@ int I2C1_burstWrite (int slaveAddr, unsigned int memAddr, int byteCount, unsigne
     while(!(EUSCI_B1->IFG & 2));
     EUSCI_B1->CTLW0 |= 0x0004;          // send STOP
     while (EUSCI_B1->CTLW0 & 4);         // wait until stop and sent
+
+    //
+//    LCDLineWrite(20, 20, "FLAG1", ST7735_Color565(0xff, 0xff, 0xff), ST7735_Color565(0, 0, 0), 2, 5);
+    //
 
     return 0;
 }
